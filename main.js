@@ -11,9 +11,9 @@ window.addEventListener('keyup', function(evt) { onKeyUp(evt); }, false);
 var SCREEN_WIDTH = canvas.width;
 var SCREEN_HEIGHT = canvas.height;
 
-var ASTEROID_SPEED = 1.2;
-var PLAYER_SPEED = 2;
-var PLAYER_TURN_SPEED = 0.08;
+var ASTEROID_SPEED = 0.8;
+var PLAYER_SPEED = 5;
+var PLAYER_TURN_SPEED = 0.09;
 var BULLET_SPEED = 15;
 
 //Constant 
@@ -27,6 +27,8 @@ var KEY_DOWN 	= 40;
 var STATE_SPLASH = 0;
 var STATE_GAME = 1;
 var STATE_GAMEOVER = 2;
+
+var PlayerScore = 0;
 
 var gameState = STATE_SPLASH;
 
@@ -59,8 +61,10 @@ var Player =
 	height : 80,
 	directionX: 0,
 	directionY: 0,
+	Dead : false,
 	angularDirection: 0,
-	rotation: 0
+	rotation: 0,
+	lives: 3
 };
 
 //set the image for the player to use
@@ -165,26 +169,13 @@ function playerShoot()
 
 	//starts the bullet at the player coordinates
 	Bullet.x = Player.x;
-	Bullet.y = Player.y;
+	Bullet.y = Player.y; 
 
 	Bullets.push(Bullet);
 }
 
 ////////////////////////////////////////////////////////////
 //Misc Functions
-
-function runSplash(dt)
-{
-}
-
-function runGame(dt)
-{
-}
-
-function runGameOver(dt)
-{
-}
-
 
 //returns a random real value between floor and ceil
 function rand(floor, ceil)
@@ -229,7 +220,7 @@ function onKeyDown(event)
 	}
 	if (event.keyCode == KEY_SPACE && ShootTimer <= 0)
 	{
-		ShootTimer += 0.3;
+		ShootTimer += .5;
 		playerShoot();
 	}
 }
@@ -260,19 +251,19 @@ var lastUpdate = Date.now();
 
 //
 var SplashTimer = 3;
-function runSplash(deltaTime)
+function runSplash(dt)
 {
 	//counts down three seconds then switchs to the game
-	SplashTimer -= (deltaTime);
+	SplashTimer -= dt;
 	if (SplashTimer <= 0)
 	{
 		gameState = STATE_GAME;
 		return;
 	}
 
-	context.fillStyle = "#FF3333";
-	context.font = "25px Arial";
-	context.fillText( "Asteroids (Test Name)", 200, 240);
+	context.fillStyle = "#000";
+	context.font = "18px Arial";
+	context.fillText("Asteroids", 200, 240);
 
 }
 
@@ -292,6 +283,13 @@ function runGame(dt)
 		}
 	}
 
+	
+	//The players score settings
+    context.font = "18px Arial";
+    var TextMeasure = context.measureText("Score: " + PlayerScore);
+    context.fillText("Score: " + PlayerScore, SCREEN_WIDTH/5 - (TextMeasure.width/3), SCREEN_HEIGHT/2);
+
+	
 	////////////////////////////////////////////////////////////
 	//Player Movement
 	var s = Math.sin(Player.rotation);
@@ -310,24 +308,40 @@ function runGame(dt)
 	Player.rotation += Player.angularDirection * PLAYER_TURN_SPEED;
 
 	//draw the player adjusting player origin
+for (var i = 0 ; i < Asteroids.length; i++)
+	{
+		//if the player hits an Asteroid, takes out one life and the Asteroid
+		if (intersects(	Player.x - Player.width/2, Player.y - Player.height/2,
+						Player.width, Player.height,
+						Asteroids[i].x - Asteroids[i].width/2, Asteroids[i].y - Asteroids[i].height/2,
+						Asteroids[i].width, Asteroids[i].height))
+		{
+			Player.lives -= 1;
+			Asteroids.splice(i, 1);
+		}
+	
+	
+	if (Player.lives <= 0)
+		gameState = STATE_GAMEOVER;
+	//draw the player adjusting player origin
 	context.save();
 		context.translate( Player.x, Player.y);
 		context.rotate(Player.rotation);
 		context.drawImage(Player.image, -Player.width/2, -Player.height/2);
 	context.restore();
-
+	}
+	
 	////////////////////////////////////////////////////////////
 	//Asteroid Movement
 	for (var i = 0; i < Asteroids.length; i++)
 	{
-		//moves teh Asteroid
+		//moves the Asteroid
 		Asteroids[i].x += Asteroids[i].velocityX;
 		Asteroids[i].y += Asteroids[i].velocityY;
 
-		//Draws teh Asteroid
+		//Draws the Asteroid
 		context.drawImage( Asteroids[i].image, Asteroids[i].x, Asteroids[i].y );
 
-		// TODO: Check of the Asteroid has gone out of Screen Boundies
 	}
 
 	//spawns a new one every SECOND 
@@ -337,6 +351,7 @@ function runGame(dt)
 		AsteroidSpawnTimer = 0;
 		spawnAsteroid();
 	}
+		
 
 	////////////////////////////////////////////////////////////
 	//Bullet Movement
@@ -367,6 +382,7 @@ function runGame(dt)
 								Asteroids[j].width, Asteroids[j].height);
 				if (hit == true)
 				{
+					PlayerScore ++;
 					Bullets.splice(i,1);
 					Asteroids.splice(j,1);
 					break;
@@ -376,25 +392,31 @@ function runGame(dt)
 	}
 }
 
+
+	//Score settings
+    context.font = "18px Arial";
+    var TextMeasure = context.measureText("Score: " + PlayerScore);
+    context.fillText("Score: " + PlayerScore, SCREEN_WIDTH/3 - (TextMeasure.width/3), SCREEN_HEIGHT/3);
+
+	
+	
+
+
 function runEnd(dt)
-{
-
-}
-
+{};
 //callback function to run each frame
 function run()
 {
-	//First we work out the difference in time between now and the last update
-	//and chuck it into deltaTime
+	
 	var now = Date.now();
 	var DeltaTime = (now - lastUpdate) * 0.001;
 	lastUpdate = now;
 
-	//Gray Background
-	context.fillStyle = "#6666FF";
+	
+	context.fillStyle = "#0000FF";
 	context.fillRect(0, 0, canvas.width, canvas.height);
 
-	//runs the current game state 
+	//Game States
 	switch (gameState)
 	{
 		case STATE_SPLASH:
